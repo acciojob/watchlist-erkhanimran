@@ -1,80 +1,92 @@
 package com.driver;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Repository;
+import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
 
 @Repository
 public class MovieRepository {
-    HashMap<String,Movie> movieDb = new HashMap<>();
-    HashMap<String,Director> directorDb = new HashMap<>();
-    HashMap<String, List<String>> MovieDirectorPairDb = new HashMap<>();
+    private HashMap<String, Movie> movie_database;
+    private HashMap<String, Director> director_database;
+    private HashMap<String, ArrayList<Movie>> director_movie_database;
 
-    public void addMovie(Movie movie) {
-        if(!movieDb.containsKey(movie.getName()))
-        {
-            movieDb.put(movie.getName(),movie);
+    // Last Update - allocating memory in the constructor for the lists :
+    public MovieRepository() {
+        this.movie_database = new HashMap<>();
+        this.director_database = new HashMap<>();
+        this.director_movie_database = new HashMap<>();
+    }
+
+    public String addMovie(Movie movie) {
+        movie_database.put(movie.getName(), movie);
+        return "Success";
+    }
+
+    public String addDirector(Director director) {
+        director_database.put(director.getName(), director);
+        return "Success";
+    }
+
+    public Movie getMovieByName(String name){
+        return movie_database.get(name);
+    }
+
+    public Director getDirectorByName(String name){
+        return director_database.get(name);
+    }
+
+    public List<String> getMoviesByDirectorName(String director_name){
+        List<String> movies_list = new ArrayList<>();
+        for(Movie movie : director_movie_database.get(director_name)){
+            movies_list.add(movie.getName());
         }
+        return movies_list;
     }
 
-    public void addDirector(Director director) {
-        if(!directorDb.containsKey(director.getName()))
-        {
-            directorDb.put(director.getName(),director);
+    public List<String> findAllMovies(){
+        // Efficient way of returning the keySet() of the movie_database :
+        return new ArrayList<>(movie_database.keySet());
+    }
+
+    public String deleteAllDirectors() throws NullPointerException {
+        /*director_database.clear();
+        director_movie_database.clear();
+         */
+
+        // Logic to avoid deleting the movies that haven't been mapped with a specific director :
+        // After updating this logic, 2 Errors are appearing :
+        for(String directorName : director_database.keySet()){
+            for(Movie movie: director_movie_database.get(directorName)){
+                movie_database.remove(movie.getName());
+            }
+            director_movie_database.remove(directorName);
+            /*director_database.remove(directorName);*/
         }
+        // ConcurrentModification handled :
+        director_database.clear();
+        return "Success";
     }
 
-    public void addMovieDirectorPair(String movieName, String directorName) {
-        if(!MovieDirectorPairDb.containsKey(directorName))
-        {
-            List<String> l = new ArrayList<>();
-            MovieDirectorPairDb.put(directorName,l);
-        }
-        List<String> l= MovieDirectorPairDb.get(directorName);
-        l.add(movieName);
-        MovieDirectorPairDb.put(directorName,l);
+    public String deleteDirectorByName(String director_name) throws NullPointerException {
+        // This code worked and passed all TC and errors :
+        for(Movie movie: director_movie_database.get(director_name))
+            movie_database.remove(movie.getName());
+
+        director_movie_database.remove(director_name);
+        director_database.remove(director_name);
+        return "Success";
     }
 
-    public Movie getMovieByName(String movieName) {
-        Movie movie = movieDb.get(movieName);
-        return movie;
-    }
+    public String addMovieDirectorPair(String movie_name, String director_name) {
+        if(!director_movie_database.containsKey(director_name))
+            director_movie_database.put(director_name,new ArrayList<Movie>());
 
-    public Director getDirectorByName(String directorName) {
-        Director director = directorDb.get(directorName);
-        return director;
-    }
-
-    public List<String> getMovieByDirectorName(String directorName) {
-        List<String> ans = MovieDirectorPairDb.get(directorName);
-        return ans;
-    }
-
-    public List<String> getAllMovies() {
-        List<String> ans = new ArrayList<>();
-        for(String movieName:movieDb.keySet())
-        {
-            ans.add(movieName);
-        }
-        return ans;
-    }
-
-    public void deleteDirectorByName(String directorName) {
-        directorDb.remove(directorName);
-        MovieDirectorPairDb.remove(directorName);
-    }
-
-    public void deleteAllDirectors() {
-        for(String name:directorDb.keySet())
-        {
-            directorDb.remove(name);
-        }
-
-        for(String name:MovieDirectorPairDb.keySet())
-        {
-            MovieDirectorPairDb.remove(name);
-        }
+        director_movie_database.get(director_name).add(getMovieByName(movie_name));
+        return "Success";
     }
 }
